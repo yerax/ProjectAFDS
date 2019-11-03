@@ -19,16 +19,8 @@ def compute(img, A, i1, j1, i2, j2):
         return A[100*i1+j1][i2*100+j2]
     else:
         red,green,blue = img[i1][j1]
-        if (i1 > 95):
-            i1 = i1 - 99
-        if (j1 > 95):
-            j1 = j1 - 99
         x = [red, green, blue, i1/100, j1/100]
         red2,green2,blue2 = img[i2][j2]
-        if (i2 > 95):
-            i2 = i2 - 99
-        if (j2 > 95):
-            j2 = j2 - 99
         y = [red2, green2, blue2, i2/100, j2/100]
         dist = distance.euclidean(x,y)
         w = -4 * (dist*dist)
@@ -50,20 +42,44 @@ def function_Q2(img):
                         continue
                     if ((a!=0) and (b!=0) and (i+a) < 100 and  (j+b) < 100):
                         A[ver][ver + (100*a + b)] = compute(img,A, i, j, i+a, j+b)
+                    elif ((i+a) > 100 and (j+b) > 100): #wrap around
+                        A[ver][ver - 9999 + (100*a + b)] = compute(img,A,i,j, i-99+a, j-99+b)
+
                     if ((a!=0) and (i + a) < 100):
                         A[ver][ver + (100*a)] = compute(img, A, i, j, i+a, j)
+                    elif ((i+a) > 100): #wrap around
+                        A[ver][ver - 9900 + (100*a)] = compute(img, A, i,j,i-99+a,j)
+
                     if ((a!=0) and (i - a) > 0):
                         A[ver][ver - (100 * a)] = compute(img, A, i, j,i-a, j)
+                    elif ((i-a) < 0):
+                        A[ver][ver + 9900 - (100*a)] = compute(img, A, i, j, i+99-a, j)
+
                     if ((b!=0) and j+b < 100):
                         A[ver][ver +b] = compute(img, A, i, j, i, j+b)
+                    elif ((j+b) > 100):
+                        A[ver][ver-99+b] = compute(img,A,i,j,i,j-99+b)
+
                     if ((b!=0) and j-b >0):
                         A[ver][ver -b] = compute(img, A, i, j, i, j-b)
+                    elif ((j-b) < 0):
+                        A[ver][ver +99-b] = compute(img, A, i,j,i,j+99-b)
+
                     if ((a!=0) and (b!=0) and (i+a) < 100 and  (j-b) > 0):
                         A[ver][ver + (100*a -b)]  = compute(img,A,i, j, i+a, j-b)
+                    elif ((i+a) > 100 and (j-b) < 0):
+                        A[ver][ver -9900 +99 +(100*a -b)] = compute(img, A,i,j,i-99+a, j+99-b)
+
                     if ((a!=0) and (b!=0) and (i-a) > 0   and  (j+b) < 100):
                         A[ver][ver + (-100*a +b)] = compute(img,A,i, j, i-a, j+b)
+                    elif ((i-a) < 0 and (j+b) > 100):
+                        A[ver][ver +9900 - 99 + (-100*a +b)] = compute(img,A,i,j,i+99-a, j-99+b)
+
                     if ((a!=0) and (b!= 0) and (i-a) > 0   and   (j-b)> 0):
                         A[ver][ver - (100*a + b)] = compute(img,A,i, j, i-a, j-b)
+                    elif ((i-a) < 0 and (j-b)  < 0):
+                        A[ver][ver + 9999 - (100*a +b)] = compute(img,A,i,j,i+99-a, j-99+b)
+
 
     sumdeg = np.count_nonzero(A)
     avgdegree = sumdeg / 10000
@@ -77,26 +93,77 @@ def function_Q3 (mat):
     res = power_method(mat,start,7)
     res = np.reshape(res, (100,100))
     plt.imshow(res)
-    plt.show()
+    plt.savefig("out2.png")
 
 def power_method(mat,start, k):
     result = start
     for i in range(k):
-        result = np.matmul(mat,result)
+        result = mat.dot(result)
     return result
+
+
+def getLaplacian (Adj):
+    D = sc.csr_matrix((10000, 10000)).toarray()
+    Dp = sc.csr_matrix((10000, 10000)).toarray()
+    for i in range(10000):
+        zeros = np.count_nonzero(Adj[i])
+        if (zeros > 0):
+            D[i][i] = 1 / np.sqrt(zeros)
+            Dp[i][i] = np.sqrt(zeros)
+        else:
+            D[i][i] = 0
+    D = sc.dia_matrix(D)
+    Dp = sc.dia_matrix(Dp)
+    Laplace = sc.identity(10000) - D * Adj * D
+    return Laplace, Dp
+
+def compute2(S):
+    print("TODO")
+
+
+def function_Q4(img, Dp):
+    x = np.random.normal(0,1,(10000,1))
+    f1 = Dp*np.full((10000,1),1)
+    f2 = x - f1 * np.vdot(x, f1)
+    # Sort Array
+    list = np.empty((10000,2))
+    for i in range(10000):
+        list[i][0] = i
+        list[i][1] = f2[i]
+    listSorted = list[list[:,1].argsort()]
+    # Algorithm 2
+    t = 0
+    S = []
+    Sp = []
+    Sp.append(listSorted[0][0])
+    while t < 10000:
+        t = t + 1
+        S.append(listSorted[t][0])
+        if compute2(S) < compute2(Sp):
+            Sp = S
+
+
+    newImg = np.full((10000,1), 0)
+    for v in range(len(Sp)):
+        newImg[listSorted[Sp[v]]] = 1
+
+
+
+
 
 
 def main():
     img = plt.imread("input/bear.png")
-
-
 # Work With Question 1
     img = function_Q1(img)
 # Work With Question 2 TODO WORK OK + OPTIMIZE (Most Consuming Resources)
     Am = function_Q2(img)
 # Work With Question 3
-    Laplacian = sc.csgraph.laplacian(Am,normed=True) # Laplacian not setting 1 to L[0][0]
+    Laplacian,D = getLaplacian(Am)
     img2 = function_Q3(2*sc.identity(10000) - Laplacian)
+
+# Work With Question 4
+   # function_Q4(img2, D)
 
 
 
