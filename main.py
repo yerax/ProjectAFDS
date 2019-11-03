@@ -3,6 +3,7 @@ import scipy.sparse as sc
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial import distance
+from scipy.sparse.linalg import eigsh
 
 # WORKING
 def function_Q1(img):
@@ -21,6 +22,10 @@ def compute(img, A, i1, j1, i2, j2):
         red,green,blue = img[i1][j1]
         x = [red, green, blue, i1/100, j1/100]
         red2,green2,blue2 = img[i2][j2]
+        if (i1 < 50 and i2 > 95):
+            i2 = i2 - 99
+        if (j2 < 50 and j2 > 95):
+            j2 = j2 - 99
         y = [red2, green2, blue2, i2/100, j2/100]
         dist = distance.euclidean(x,y)
         w = -4 * (dist*dist)
@@ -89,16 +94,17 @@ def function_Q2(img):
     return A
 
 def function_Q3 (mat):
-    start = np.random.normal(0,1,(10000,1))
-    res = power_method(mat,start,7)
+    start = np.random.normal(0, 1, (10000,1))
+    res = power_method(mat,start,10)
     res = np.reshape(res, (100,100))
     plt.imshow(res)
     plt.savefig("out2.png")
 
 def power_method(mat,start, k):
-    result = start
+    result = np.array(start)
     for i in range(k):
-        result = mat.dot(result)
+        result = mat*result
+        result = result / np.linalg.norm(result)
     return result
 
 
@@ -160,7 +166,8 @@ def main():
     Am = function_Q2(img)
 # Work With Question 3
     Laplacian,D = getLaplacian(Am)
-    img2 = function_Q3(2*sc.identity(10000) - Laplacian)
+    img2 = function_Q3(Laplacian)
+    #img2 = function_Q3(2*sc.identity(10000) - Laplacian)
 
 # Work With Question 4
    # function_Q4(img2, D)
