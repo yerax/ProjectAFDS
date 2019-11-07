@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial import distance
 from scipy.sparse.linalg import eigsh
+import copy
 
 # WORKING
 def function_Q1(img):
@@ -22,10 +23,14 @@ def compute(img, A, i1, j1, i2, j2):
         red,green,blue = img[i1][j1]
         x = [red, green, blue, i1/100, j1/100]
         red2,green2,blue2 = img[i2][j2]
-        if (i1 < 50 and i2 > 95):
-            i2 = i2 - 99
-        if (j2 < 50 and j2 > 95):
-            j2 = j2 - 99
+        if (i1 < 90 and i2 > 95):
+            i2 = i2 - 100
+        if (i1 > 90 and i2 < 5):
+            i2 = i2 + 100
+        if (j1 < 90 and j2 > 95):
+            j2 = j2 - 100
+        if (j1 > 90 and j2 < 5):
+            j2 = j2 + 100
         y = [red2, green2, blue2, i2/100, j2/100]
         dist = distance.euclidean(x,y)
         w = -4 * (dist*dist)
@@ -35,78 +40,150 @@ def compute(img, A, i1, j1, i2, j2):
         else:
             return res
 
-# todo -> Fix Wrap Around
 def function_Q2(img):
     A = sc.csr_matrix((10000, 10000)).toarray()
     for i in range(100):
         for j in range(100):
             ver = i*100 + j
             for a in range(5):
-                for b in range(5):
-                    if (a == 0 and b == 0):
-                        continue
-                    if ((a!=0) and (b!=0) and (i+a) < 100 and  (j+b) < 100):
-                        A[ver][ver + (100*a + b)] = compute(img,A, i, j, i+a, j+b)
-                    elif ((i+a) > 100 and (j+b) > 100): #wrap around
-                        A[ver][ver - 9999 + (100*a + b)] = compute(img,A,i,j, i-99+a, j-99+b)
+                if (a == 0):
+                    continue
 
-                    if ((a!=0) and (i + a) < 100):
-                        A[ver][ver + (100*a)] = compute(img, A, i, j, i+a, j)
-                    elif ((i+a) > 100): #wrap around
-                        A[ver][ver - 9900 + (100*a)] = compute(img, A, i,j,i-99+a,j)
+                if ((i+a) < 100 and (j+a) < 100):
+                   comp = compute(img,A, i, j, i+a, j+a)
+                   A[ver][ver + (100*a + a)] = comp
+                   A[ver + (100*a + a)][ver] = comp
+                elif ((i+a) > 100 and (j+a) > 100): #wrap around
+                   comp = compute(img,A,i,j, i-99+a, j-99+a)
+                   A[ver][ver - 9999 + (100*a + a)] = comp
+                   A[ver - 9999 + (100*a + a)][ver] = comp
 
-                    if ((a!=0) and (i - a) > 0):
-                        A[ver][ver - (100 * a)] = compute(img, A, i, j,i-a, j)
-                    elif ((i-a) < 0):
-                        A[ver][ver + 9900 - (100*a)] = compute(img, A, i, j, i+99-a, j)
+                if ((i + a) < 100):
+                    comp = compute(img, A, i, j, i+a, j)
+                    A[ver][ver + (100*a)] = comp
+                    A[ver + (100*a)][ver] = comp
+                elif ((i+a) > 100): #wrap around
+                    comp = compute(img, A, i,j,i-99+a,j)
+                    A[ver][ver - 9900 + (100*a)] = comp
+                    A[ver - 9900 + (100*a)][ver] = comp
 
-                    if ((b!=0) and j+b < 100):
-                        A[ver][ver +b] = compute(img, A, i, j, i, j+b)
-                    elif ((j+b) > 100):
-                        A[ver][ver-99+b] = compute(img,A,i,j,i,j-99+b)
+                if ((i - a) > 0):
+                    comp = compute(img, A, i, j,i-a, j)
+                    A[ver][ver - (100 * a)] = comp
+                    A[ver - (100 * a)][ver] = comp
+                elif ((i-a) < 0):
+                    comp = compute(img, A, i, j, i+99-a, j)
+                    A[ver][ver + 9900 - (100*a)] = comp
+                    A[ver + 9900 - (100*a)][ver] = comp
 
-                    if ((b!=0) and j-b >0):
-                        A[ver][ver -b] = compute(img, A, i, j, i, j-b)
-                    elif ((j-b) < 0):
-                        A[ver][ver +99-b] = compute(img, A, i,j,i,j+99-b)
+                if (j+a < 100):
+                    comp = compute(img, A, i, j, i, j+a)
+                    A[ver][ver +a] = comp
+                    A[ver +a][ver] = comp
+                elif ((j+a) > 100):
+                    comp = compute(img,A,i,j,i,j-99+a)
+                    A[ver][ver-99+a] = comp
+                    A[ver-99+a][ver] = comp
 
-                    if ((a!=0) and (b!=0) and (i+a) < 100 and  (j-b) > 0):
-                        A[ver][ver + (100*a -b)]  = compute(img,A,i, j, i+a, j-b)
-                    elif ((i+a) > 100 and (j-b) < 0):
-                        A[ver][ver -9900 +99 +(100*a -b)] = compute(img, A,i,j,i-99+a, j+99-b)
+                if (j-a >0):
+                    comp = compute(img, A, i, j, i, j-a)
+                    A[ver][ver -a] = comp
+                    A[ver-a][ver]  = comp
+                elif ((j-a) < 0):
+                    comp = compute(img, A, i,j,i,j+99-a)
+                    A[ver][ver +99-a] = comp
+                    A[ver+99-a][ver]  = comp
 
-                    if ((a!=0) and (b!=0) and (i-a) > 0   and  (j+b) < 100):
-                        A[ver][ver + (-100*a +b)] = compute(img,A,i, j, i-a, j+b)
-                    elif ((i-a) < 0 and (j+b) > 100):
-                        A[ver][ver +9900 - 99 + (-100*a +b)] = compute(img,A,i,j,i+99-a, j-99+b)
 
-                    if ((a!=0) and (b!= 0) and (i-a) > 0   and   (j-b)> 0):
-                        A[ver][ver - (100*a + b)] = compute(img,A,i, j, i-a, j-b)
-                    elif ((i-a) < 0 and (j-b)  < 0):
-                        A[ver][ver + 9999 - (100*a +b)] = compute(img,A,i,j,i+99-a, j-99+b)
+                if ((i+a) < 100 and  (j-a) > 0):
+                    comp = compute(img,A,i, j, i+a, j-a)
+                    A[ver][ver + (100*a -a)]  = comp
+                    A[ver + (100*a -a)][ver]  = comp
+                elif ((i+a) > 100 and (j-a) < 0):
+                    comp = compute(img, A,i,j,i-99+a, j+99-a)
+                    A[ver][ver -9900 +99 +(100*a -a)] = comp
+                    A[ver -9900 +99 +(100*a -a)][ver] = comp
+
+                if ((i-a) > 0   and  (j+a) < 100):
+                    comp = compute(img,A,i, j, i-a, j+a)
+                    A[ver][ver + (-100*a +a)] = comp
+                    A[ver + (-100*a +a)][ver] = comp
+                elif ((i-a) < 0 and (j+a) > 100):
+                    comp = compute(img,A,i,j,i+99-a, j-99+a)
+                    A[ver][ver +9900 - 99 + (-100*a +a)] = comp
+                    A[ver +9900 - 99 + (-100*a +a)][ver] = comp
+
+                if ((i-a) > 0   and   (j-a)> 0):
+                    comp = compute(img,A,i, j, i-a, j-a)
+                    A[ver][ver - (100*a + a)] = comp
+                    A[ver - (100*a + a)][ver] = comp
+                elif ((i-a) < 0 and (j-a)  < 0):
+                    comp = compute(img,A,i,j,i+99-a, j-99+a)
+                    A[ver][ver + 9999 - (100*a +a)] = comp
+                    A[ver + 9999 - (100*a +a)][ver] = comp
 
 
     sumdeg = np.count_nonzero(A)
-    avgdegree = sumdeg / 10000
     numedges = sumdeg  / 2
-    print("AVG Degree: "+str(avgdegree)) # TODO TAKE INTO ACCOUNT WEIGHTSS!!!!!
+    print("AVG Degree: "+str(sum(A[np.nonzero(A)])/10000)) # TODO TAKE INTO ACCOUNT WEIGHTSS!!!!!
     print("NUM Edges : "+str(numedges))
     return A
 
-def function_Q3 (mat):
-    start = np.random.normal(0, 1, (10000,1))
-    res = power_method(mat,start,10)
+def function_Q3 (mat,D):
+    res = power_method(mat,D,150)
     res = np.reshape(res, (100,100))
     plt.imshow(res)
     plt.savefig("out2.png")
+    return res
 
-def power_method(mat,start, k):
-    result = np.array(start)
+def power_method(mat,f_1,k):
+    x = np.random.normal(0, 1, 10000)
+    f_1 = f_1 / np.sqrt((f_1 ** 2).sum())
+    x0 = x - np.inner(f_1, x)*f_1
     for i in range(k):
-        result = mat*result
-        result = result / np.linalg.norm(result)
-    return result
+        x0 = mat.dot(x0)
+        x0 = np.squeeze(np.asarray(x0))
+        x0/=np.linalg.norm(x0)
+    return x0
 
+def compute2(S):
+    print("TODO")
+
+def function_Q4(img,Adj):
+    f2 = img.reshape(10000)
+    # Sort Array
+    list = np.empty((10000,2))
+    for i in range(10000):
+        list[i][0] = i
+        list[i][1] = f2[i]
+    listSorted = list[list[:,1].argsort()]
+    # Algorithm 2
+    t = 0
+    S = []
+    compS = 0
+    Sp = []
+    Sp.append(listSorted[0][0])
+    compSp = np.count_nonzero(Adj[int(listSorted[0][0])])
+    while t < 9999:
+        t = t + 1
+        compS += np.count_nonzero(Adj[int(listSorted[t][0])])
+        for i in range (len(S)):
+            if (Adj[int(S[i])][int(listSorted[t][0])] != 0):
+                compS -= 2 # Erase Edge
+        S.append(listSorted[t][0])
+        if compS / min(len(S), 10000-len(S)) < compSp / min(len(Sp), 10000-len(Sp)):
+            compSp = compS
+            Sp = copy.copy(S)
+
+    print(Sp)
+
+    newImg = np.full((10000,1), 0)
+    for v in range(len(Sp)):
+        newImg[int(listSorted[int(Sp[v])][0])] = 1.0
+
+    newImg = np.reshape(newImg, (100,100))
+    plt.imshow(newImg)
+    plt.savefig("out3.png")
 
 def getLaplacian (Adj):
     D = sc.csr_matrix((10000, 10000)).toarray()
@@ -119,82 +196,31 @@ def getLaplacian (Adj):
         else:
             D[i][i] = 0
     D = sc.dia_matrix(D)
-    Dp = sc.dia_matrix(Dp)
     Laplace = sc.identity(10000) - D * Adj * D
     return Laplace, Dp
-
-def compute2(S):
-    print("TODO")
-
-
-def function_Q4(img, Dp):
-    x = np.random.normal(0,1,(10000,1))
-    f1 = Dp*np.full((10000,1),1)
-    f2 = x - f1 * np.vdot(x, f1)
-    # Sort Array
-    list = np.empty((10000,2))
-    for i in range(10000):
-        list[i][0] = i
-        list[i][1] = f2[i]
-    listSorted = list[list[:,1].argsort()]
-    # Algorithm 2
-    t = 0
-    S = []
-    Sp = []
-    Sp.append(listSorted[0][0])
-    while t < 10000:
-        t = t + 1
-        S.append(listSorted[t][0])
-        if compute2(S) < compute2(Sp):
-            Sp = S
-
-
-    newImg = np.full((10000,1), 0)
-    for v in range(len(Sp)):
-        newImg[listSorted[Sp[v]]] = 1
-
-
-
-
 
 
 def main():
     img = plt.imread("input/bear.png")
 # Work With Question 1
     img = function_Q1(img)
-# Work With Question 2 TODO WORK OK + OPTIMIZE (Most Consuming Resources)
+# Work With Question 2
     Am = function_Q2(img)
 # Work With Question 3
-    Laplacian,D = getLaplacian(Am)
-    img2 = function_Q3(Laplacian)
-    #img2 = function_Q3(2*sc.identity(10000) - Laplacian)
-
+    Laplacian, Di= sc.csgraph.laplacian(Am,normed=True,return_diag=True)
+    img2 = function_Q3(2*sc.identity(10000) - Laplacian,Di)
 # Work With Question 4
-   # function_Q4(img2, D)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    #function_Q4(img2,Am)
 
 
 
 
 if __name__ == '__main__':
     main()
+
+
+
+
 
 
 
